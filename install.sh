@@ -150,19 +150,24 @@ $IMPORT_USERS_SCRIPT_FILE
 # systemd is also not standardized in the name of the ssh service, nor in the places
 # where the unit files are stored.
 
-if [[ (`systemctl is-system-running` =~ running) || (`systemctl is-system-running` =~ degraded) ]]; then
-  if [ -f "/usr/lib/systemd/system/sshd.service" ] || [ -f "/lib/systemd/system/sshd.service" ]; then
-    systemctl restart sshd.service
-  else
-    systemctl restart ssh.service
+# Capture the return code and use that to determine if we have the command available
+which systemctl > /dev/null 2>&1
+retval=$?
+
+if [[ "$retval" -eq "0" ]]; then
+  if [[ (`systemctl is-system-running` =~ running) || (`systemctl is-system-running` =~ degraded) ]]; then
+    if [ -f "/usr/lib/systemd/system/sshd.service" ] || [ -f "/lib/systemd/system/sshd.service" ]; then
+      systemctl restart sshd.service
+    else
+      systemctl restart ssh.service
+    fi
   fi
-  systemctl restart sshd.service
 elif [[ `/sbin/init --version` =~ upstart ]]; then
-  if [ -f "/etc/init.d/sshd" ]; then
-    service sshd restart
-  else
-    service ssh restart
-  fi
+    if [ -f "/etc/init.d/sshd" ]; then
+      service sshd restart
+    else
+      service ssh restart
+    fi
 else
   if [ -f "/etc/init.d/sshd" ]; then
     /etc/init.d/sshd restart
